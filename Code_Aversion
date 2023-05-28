@@ -1,0 +1,41 @@
+from PyPDF2 import PdfReader
+import os
+
+def extract_text_from_pdf(file_path):
+    pdf = PdfReader(file_path)
+    text = ""
+    for page in pdf.pages:
+        text += page.extract_text()
+    return text
+
+dir_path = "D:/Python"  # the path to your folder with PDFs
+papers_text = []
+
+for file_name in os.listdir(dir_path):
+    if file_name.endswith(".pdf"):
+        file_path = os.path.join(dir_path, file_name)
+        text = extract_text_from_pdf(file_path)
+        papers_text.append(text)
+
+# Now `papers_text` is a list with the text from each paper.
+
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer('all-MiniLM-L6-v2')  # Using a smaller but performant model for embedding
+
+papers_embeddings = model.encode(papers_text)
+
+# Now `papers_embeddings` is a list of embeddings for each paper.
+
+from transformers import pipeline
+
+# Initialize the named entity recognition pipeline
+ner_pipeline = pipeline("ner", model="dslim/bert-base-NER")
+
+papers_ner_results = []
+for text in papers_text:
+    ner_results = ner_pipeline(text[:100000])  # Limiting to first 100000 characters. You might need to adjust this value based on the length of your text.
+    papers_ner_results.append(ner_results)
+
+# Now `papers_ner_results` is a list of NER results for each paper.
+print(papers_ner_results)

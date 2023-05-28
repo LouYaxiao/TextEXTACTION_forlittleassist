@@ -37,5 +37,24 @@ for text in papers_text:
     ner_results = ner_pipeline(text[:100000])  # Limiting to first 100000 characters. You might need to adjust this value based on the length of your text.
     papers_ner_results.append(ner_results)
 
+from transformers import AutoTokenizer, AutoModelForTokenClassification
+from transformers import pipeline
+
+#This script tokenizes the input text, passes it through the NER model, and prints out the entities recognized in the text.
+# The entities are labeled according to a standard set of entity types, such as 'B-ORG' (Beginning of an Organization), 'I-ORG' (Inside of an Organization),
+# 'B-PER' (Beginning of a Person's name), 'I-PER' (Inside of a Person's name), etc.
+tokenizer = AutoTokenizer.from_pretrained("dslim/bert-base-NER")
+model = AutoModelForTokenClassification.from_pretrained("dslim/bert-base-NER")
+
+nlp = pipeline("ner", model=model, tokenizer=tokenizer)
+
+# Suppose 'text' contains the extracted text from your documents
+text = """Apple Inc. is planning to open its first retail store in San Francisco by end of 2023. 
+CEO Tim Cook made this announcement."""
+
+ner_results = nlp(text)
+
+for result in ner_results:
+    print(result)
 # Now `papers_ner_results` is a list of NER results for each paper.
 print(papers_ner_results)

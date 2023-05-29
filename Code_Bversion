@@ -1,0 +1,63 @@
+from PyPDF2 import PdfReader
+import os
+from sentence_transformers import SentenceTransformer
+from transformers import pipeline, AutoTokenizer, AutoModelForQuestionAnswering, AutoModelForTokenClassification
+
+def extract_text_from_pdf(file_path):
+    pdf = PdfReader(file_path)
+    text = ""
+    for page in pdf.pages:
+        text += page.extract_text()
+    return text
+
+def chunked_summarization(summarizer, text, max_length=200, min_length=40, do_sample=False):
+    tokens = summarizer.tokenizer(text, truncation=False)["input_ids"]
+    chunks = [tokens[i:i+max_length] for i in range(0, len(tokens), max_length)]
+    chunks_text = [summarizer.tokenizer.decode(chunk) for chunk in chunks]
+    summaries = [summarizer(chunk, max_length=max_length, min_length=min_length, do_sample=do_sample)[0]['summary_text'] for chunk in chunks_text]
+    summary = ' '.join(summaries)
+    return summary
+
+def chunked_pipeline(nlp_qa, context, question):
+    max_length = 500
+    chunks = [context[i:i+max_length] for i in range(0, len(context), max_length)]
+    qa_results = [nlp_qa(question=question, context=chunk) for chunk in chunks]
+    qa_results = sorted(qa_results, key=lambda x: x['score'], reverse=True)
+    return qa_results[0]
+
+dir_path = "D:/Python"  # the path to your folder with PDFs
+papers_text = []
+
+for file_name in os.listdir(dir_path):
+    if file_name.endswith(".pdf"):
+        file_path = os.path.join(dir_path, file_name)
+        text = extract_text_from_pdf(file_path)
+        papers_text.append(text)
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
+papers_embeddings = model.encode(papers_text)
+
+ner_pipeline = pipeline("ner", model="dslim/bert-base-NER")
+
+papers_ner_results = []
+for text in papers_text:
+    ner_results = ner_pipeline(text[:100000])  # Limiting to first 100000 characters. You might need to adjust this value based on the length of your text.
+    papers_ner_results.append(ner_results)
+
+tokenizer = AutoTokenizer.from_pretrained("dslim/bert-base-NER")
+model = AutoModelForTokenClassification.from_pretrained("dslim/bert-base-NER")
+nlp = pipeline("ner", model=model, tokenizer=tokenizer)
+
+summarizer = pipeline('summarization', model='sshleifer/distilbart-cnn-12-6')
+
+summary_texts = [chunked_summarization(summarizer, text) for text in papers_text]
+
+print(summary_texts)
+
+nlp_qa = pipeline('question-answering', model='distilbert-base-cased-distilled-squad')
+
+context = summary_texts
+question = input("Please enter your question: ")
+
+best_answer = chunked_pipeline(nlp_qa, context, question)
+print("The answer to your question is: " + best_answer['answer'])

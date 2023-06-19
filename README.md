@@ -3,6 +3,16 @@
 My Python course homework, handle papers mainly.
 Please run the code under a environment with the libraries below:
 
+### 运行方法：
+
+直接运行main函数即可
+
+前提在D盘的python文件夹中添加的论文pdf文件
+
+### 运行结果：
+
+将在D盘的python文件夹中生成新的文件夹，分别为翻译结果和总结结果文件夹，里面有对应的txt文件，打开txt文件即可查看结果
+
 ### 需要安装的库：
 
 ca-certificates    2023.01.10 
